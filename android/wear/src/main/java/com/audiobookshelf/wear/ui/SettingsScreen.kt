@@ -2,6 +2,7 @@ package com.audiobookshelf.wear.ui
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.Explicit
 import androidx.compose.material.icons.filled.Sync
@@ -40,6 +41,7 @@ fun SettingsScreen() {
   var syncing by remember { mutableStateOf(false) }
   var confirmSignOut by remember { mutableStateOf(false) }
   val hideExplicit = rememberHideExplicit()
+  val classicHome by app.contentSettings.classicHome.collectAsState()
 
   ListScreen(
     edgeButton = {
@@ -90,6 +92,16 @@ fun SettingsScreen() {
         icon = { Icon(Icons.Default.Explicit, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) },
         secondaryLabel = { Text("Synced with your phone") },
         label = { Text("Show explicit content") }
+      )
+    }
+    item {
+      SwitchButton(
+        checked = classicHome,
+        onCheckedChange = { app.contentSettings.setClassicHome(it) },
+        modifier = itemModifier(spec),
+        transformation = SurfaceTransformation(spec),
+        icon = { Icon(Icons.AutoMirrored.Default.ViewList, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) },
+        label = { Text("Scrollable homepage") }
       )
     }
   }

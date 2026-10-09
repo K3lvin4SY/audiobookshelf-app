@@ -15,9 +15,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.tasks.await
 
 /**
- * Client-only content preferences, linked with the phone app over the Data Layer. Both devices
- * write `/abs/settings` and whichever change is newest wins. Path and keys must match
- * `WatchSync` in the phone app. Nothing here is sent to the server.
+ * Client-only preferences; nothing here is sent to the server. The explicit content setting is
+ * linked with the phone app over the Data Layer: both devices write `/abs/settings` and whichever
+ * change is newest wins (path and keys must match `WatchSync` in the phone app).
  */
 class ContentSettings(private val context: Context) {
   private val prefs = context.getSharedPreferences("content_settings", Context.MODE_PRIVATE)
@@ -25,6 +25,16 @@ class ContentSettings(private val context: Context) {
 
   /** True when the user turned "Show explicit content" off. */
   val hideExplicit: StateFlow<Boolean> = _hideExplicit.asStateFlow()
+
+  private val _classicHome = MutableStateFlow(prefs.getBoolean(KEY_CLASSIC_HOME, false))
+
+  /** Use the original scrolling list home instead of the hub. Watch only; not shared with the phone. */
+  val classicHome: StateFlow<Boolean> = _classicHome.asStateFlow()
+
+  fun setClassicHome(enabled: Boolean) {
+    prefs.edit().putBoolean(KEY_CLASSIC_HOME, enabled).apply()
+    _classicHome.value = enabled
+  }
 
   private val updatedAt get() = prefs.getLong(KEY_UPDATED_AT, 0L)
 
@@ -70,5 +80,6 @@ class ContentSettings(private val context: Context) {
     const val PATH_SETTINGS = "/abs/settings"
     const val KEY_HIDE_EXPLICIT = "hideExplicitContent"
     const val KEY_UPDATED_AT = "updatedAt"
+    private const val KEY_CLASSIC_HOME = "classicHome"
   }
 }
