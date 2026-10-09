@@ -79,6 +79,8 @@ export default {
         this.books = payload.total
 
         for (let i = 0; i < payload.results.length; i++) {
+          // Don't download books hidden by the explicit content setting
+          if (this.$explicit.isHidden(payload.results[i])) continue
           if (!(await this.$db.getLocalLibraryItem(`local_${payload.results[i].id}`))) {
             this.missingFiles += payload.results[i].numFiles
             this.missingFilesSize += payload.results[i].size

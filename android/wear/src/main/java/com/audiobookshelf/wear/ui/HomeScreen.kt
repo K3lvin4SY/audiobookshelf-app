@@ -40,8 +40,12 @@ fun HomeScreen(nav: NavHostController) {
   val app = LocalApp.current
   val context = LocalContext.current
   val nowPlaying by NowPlaying.book.collectAsState()
-  val downloads by app.downloads.books.collectAsState()
-  val active by remember { Downloads.active(context) }.collectAsState(emptyList())
+  val hideExplicit = rememberHideExplicit()
+  val allActive by remember { Downloads.active(context) }.collectAsState(emptyList())
+  val allDownloads by app.downloads.books.collectAsState()
+  // Explicit books stay on the watch but aren't shown while the setting hides them
+  val active = allActive.filterNot { hideExplicit && it.explicit }
+  val downloads = allDownloads.filterNot { hideExplicit && it.book.explicit }
   val (home, retry) = rememberLoad {
     HomeData(app.api.itemsInProgress(), app.api.audioLibraries(), app.api.allProgress())
   }
@@ -55,7 +59,7 @@ fun HomeScreen(nav: NavHostController) {
   ) {
     header("Audiobookshelf")
 
-    nowPlaying?.let { playing ->
+    nowPlaying?.takeUnless { hideExplicit && it.book.explicit }?.let { playing ->
       item {
         BookButton(
           spec = spec,
@@ -85,9 +89,10 @@ fun HomeScreen(nav: NavHostController) {
       }
       is Load.Ready -> {
         val data = home.value
-        if (data.continueListening.isNotEmpty()) {
+        val continueListening = data.continueListening.visible(hideExplicit)
+        if (continueListening.isNotEmpty()) {
           header("Continue listening")
-          items(data.continueListening, key = { it.id }) { book ->
+          items(continueListening, key = { it.id }) { book ->
             BookButton(spec, book.title, progressLabel(book, data.progress[book.id]), app.api.coverUrl(book.id, 120), { nav.navigate(Routes.item(book.id)) })
           }
         }

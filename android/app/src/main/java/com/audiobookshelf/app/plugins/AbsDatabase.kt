@@ -364,6 +364,10 @@ class AbsDatabase : Plugin() {
       if (localMediaProgress == null) {
         Log.w(tag, "syncServerMediaProgressWithLocalMediaProgress Local media progress not found $localMediaProgressId")
         call.resolve()
+      } else if (mediaProgress.lastUpdate <= localMediaProgress.lastUpdate) {
+        // Never replace progress on this phone with older progress
+        Log.d(tag, "syncServerMediaProgressWithLocalMediaProgress: Local progress is as new or newer, keeping it")
+        call.resolve(JSObject(jacksonMapper.writeValueAsString(localMediaProgress)))
       } else {
         MediaEventManager.syncEvent(mediaProgress, "Received from webhook event")
 
@@ -564,8 +568,19 @@ class AbsDatabase : Plugin() {
     val newDeviceSettings = jacksonMapper.readValue<DeviceSettings>(call.data.toString())
 
     Handler(Looper.getMainLooper()).post {
+      val previous = DeviceManager.deviceData.deviceSettings
+      val explicitChanged = previous?.hideExplicitContent != newDeviceSettings.hideExplicitContent
+      // The UI doesn't track when the explicit setting changed, so keep that here
+      newDeviceSettings.explicitSettingUpdatedAt =
+        if (explicitChanged) System.currentTimeMillis() else previous?.explicitSettingUpdatedAt ?: 0L
+
       DeviceManager.deviceData.deviceSettings = newDeviceSettings
       DeviceManager.dbManager.saveDeviceData(DeviceManager.deviceData)
+
+      if (explicitChanged) {
+        WatchSync.publishSettings(context, newDeviceSettings.hideExplicitContent, newDeviceSettings.explicitSettingUpdatedAt)
+        DeviceManager.onExplicitSettingChanged?.invoke()
+      }
 
       // Updates playback actions for media notification (handles media control seek locking setting)
       if (mainActivity.isPlayerNotificationServiceInitialized()) {

@@ -71,6 +71,10 @@ export const getters = {
     if (!state.deviceData?.deviceSettings) return 10
     return state.deviceData.deviceSettings.jumpBackwardsTime || 10
   },
+  // Client-only setting; hides explicit items in this app without changing anything on the server
+  getShowExplicitContent: (state) => {
+    return !state.deviceData?.deviceSettings?.hideExplicitContent
+  },
   getAltViewEnabled: (state) => {
     if (!state.deviceData?.deviceSettings) return true
     return state.deviceData.deviceSettings.enableAltView

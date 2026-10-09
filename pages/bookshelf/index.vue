@@ -52,6 +52,12 @@ export default {
     }
   },
   watch: {
+    '$store.getters.getShowExplicitContent'() {
+      // Setting changed (here or on the watch): reload shelves with or without explicit items
+      this.lastServerFetch = 0
+      this.lastLocalFetch = 0
+      this.fetchCategories()
+    },
     networkConnected(newVal) {
       // Update shelves when network connect status changes
       console.log(`[categories] Network changed to ${newVal} - fetch categories. ${this.lastServerFetch}/${this.lastLocalFetch}`)
@@ -256,7 +262,7 @@ export default {
           return
         }
 
-        this.shelves = categories.map((cat) => {
+        this.shelves = this.withoutHiddenExplicit(categories).map((cat) => {
           if (cat.type == 'book' || cat.type == 'podcast' || cat.type == 'episode') {
             // Map localLibraryItem to entities
             cat.entities = cat.entities.map((entity) => {
@@ -279,6 +285,17 @@ export default {
       }
 
       this.isLoading = false
+    },
+    /** Removes explicit items (and shelves left empty) while the explicit content setting hides them */
+    withoutHiddenExplicit(categories) {
+      if (!this.$explicit.hiding) return categories
+      return categories
+        .map((cat) => {
+          if (cat.type === 'authors') return cat
+          const entityName = cat.type === 'series' ? 'series' : 'books'
+          return { ...cat, entities: this.$explicit.entities(cat.entities, entityName) }
+        })
+        .filter((cat) => cat.entities?.length)
     },
     libraryChanged() {
       if (this.currentLibraryId) {

@@ -125,7 +125,8 @@ class AbsApi(private val auth: AuthStore) {
       id = item.getString("id"),
       title = metadata.optString("title"),
       author = metadata.optString("authorName"),
-      duration = media.optDouble("duration", 0.0)
+      duration = media.optDouble("duration", 0.0),
+      explicit = metadata.optBoolean("explicit", false)
     )
   }
 

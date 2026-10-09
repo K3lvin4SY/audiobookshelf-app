@@ -9,12 +9,27 @@ import org.json.JSONObject
 
 /**
  * Shares the connected server with the Audiobookshelf Wear OS app so the watch can prefill its
- * sign in. Tokens are not shared: the watch keeps its own session because the server rotates
- * refresh tokens. Path and keys must match `PhoneConfig` in the wear module.
+ * sign in, and keeps the explicit content setting the same on both devices. Tokens are not
+ * shared: the watch keeps its own session because the server rotates refresh tokens. Paths and
+ * keys must match `PhoneConfig` and `ContentSettings` in the wear module.
  */
 object WatchSync {
   private const val tag = "WatchSync"
   private const val PATH_SERVER = "/abs/server"
+  const val PATH_SETTINGS = "/abs/settings"
+  const val KEY_HIDE_EXPLICIT = "hideExplicitContent"
+  const val KEY_UPDATED_AT = "updatedAt"
+
+  /** Shares the "Show Explicit Content" setting so the watch matches. Path and keys match `ContentSettings` on the watch. */
+  fun publishSettings(context: Context, hideExplicitContent: Boolean, updatedAt: Long) {
+    val request = PutDataMapRequest.create(PATH_SETTINGS).apply {
+      dataMap.putBoolean(KEY_HIDE_EXPLICIT, hideExplicitContent)
+      dataMap.putLong(KEY_UPDATED_AT, updatedAt)
+    }.asPutDataRequest().setUrgent()
+
+    Wearable.getDataClient(context.applicationContext).putDataItem(request)
+      .addOnFailureListener { e -> Log.d(tag, "Could not share settings with watch: ${e.message}") }
+  }
 
   fun publishServerConfig(context: Context, config: ServerConnectionConfig?) {
     if (config == null) return

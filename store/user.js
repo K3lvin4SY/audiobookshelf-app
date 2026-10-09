@@ -59,8 +59,9 @@ export const getters = {
   getUserCanDownload: (state) => {
     return !!state.user?.permissions?.download
   },
-  getUserCanAccessExplicitContent: (state) => {
-    return !!state.user?.permissions?.accessExplicitContent
+  getUserCanAccessExplicitContent: (state, getters, rootState, rootGetters) => {
+    // The client-only "Show explicit content" setting hides explicit content as if access were off
+    return !!state.user?.permissions?.accessExplicitContent && rootGetters['getShowExplicitContent'] !== false
   }
 }
 

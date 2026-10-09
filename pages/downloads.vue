@@ -46,7 +46,8 @@ export default {
       return size
     },
     newLocalLibraryItem(item) {
-      if (!item) return
+      // Explicit downloads are kept but not listed while the setting hides them
+      if (!item || this.$explicit.isHidden(item)) return
       const itemIndex = this.localLibraryItems.findIndex((li) => li.id === item.id)
       const newItemObj = {
         ...item,
@@ -69,6 +70,11 @@ export default {
           coverPathSrc: lmi.coverContentUrl ? Capacitor.convertFileSrc(lmi.coverContentUrl) : null
         }
       })
+    }
+  },
+  watch: {
+    '$store.getters.getShowExplicitContent'() {
+      this.init()
     }
   },
   mounted() {

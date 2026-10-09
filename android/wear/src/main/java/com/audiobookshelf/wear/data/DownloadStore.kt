@@ -38,6 +38,27 @@ class DownloadStore(context: Context) {
     refresh()
   }
 
+  /**
+   * Downloads made before the explicit flag was stored don't know whether they're explicit.
+   * Fetch their metadata once so the explicit content setting can hide them. Audio files are untouched.
+   */
+  suspend fun backfillMetadata(api: AbsApi) {
+    var changed = false
+    for (dir in root.listFiles().orEmpty()) {
+      val meta = File(dir, META_FILE)
+      if (!meta.exists() || JSONObject(meta.readText()).has("explicit")) continue
+      try {
+        val stored = BookDetail.fromJson(JSONObject(meta.readText()))
+        val fresh = api.item(stored.id)
+        meta.writeText(stored.copy(explicit = fresh.explicit).toJson().toString())
+        changed = true
+      } catch (e: Exception) {
+        Log.w("DownloadStore", "Could not refresh metadata for ${dir.name}: ${e.message}")
+      }
+    }
+    if (changed) refresh()
+  }
+
   fun freeBytes(): Long = StatFs(root.path).availableBytes
 
   fun usedBytes(): Long = _books.value.sumOf { it.sizeBytes }

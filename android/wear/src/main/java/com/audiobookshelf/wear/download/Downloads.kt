@@ -13,7 +13,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.util.concurrent.TimeUnit
 
-data class ActiveDownload(val itemId: String, val title: String, val percent: Int)
+data class ActiveDownload(val itemId: String, val title: String, val percent: Int, val explicit: Boolean)
 
 sealed interface DownloadState {
   data object None : DownloadState
@@ -24,7 +24,7 @@ sealed interface DownloadState {
 object Downloads {
   private fun workName(itemId: String) = "download_$itemId"
 
-  fun start(context: Context, itemId: String, title: String) {
+  fun start(context: Context, itemId: String, title: String, explicit: Boolean) {
     val request = OneTimeWorkRequestBuilder<DownloadWorker>()
       .setInputData(workDataOf(DownloadWorker.KEY_ITEM_ID to itemId, DownloadWorker.KEY_TITLE to title))
       .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -32,6 +32,7 @@ object Downloads {
       .addTag(TAG)
       .addTag(ITEM_TAG_PREFIX + itemId)
       .addTag(TITLE_TAG_PREFIX + title)
+      .apply { if (explicit) addTag(EXPLICIT_TAG) }
       .build()
     WorkManager.getInstance(context).enqueueUniqueWork(workName(itemId), ExistingWorkPolicy.REPLACE, request)
   }
@@ -57,11 +58,12 @@ object Downloads {
       infos.filter { !it.state.isFinished }.mapNotNull { info ->
         val itemId = info.tags.firstOrNull { it.startsWith(ITEM_TAG_PREFIX) }?.removePrefix(ITEM_TAG_PREFIX) ?: return@mapNotNull null
         val title = info.tags.firstOrNull { it.startsWith(TITLE_TAG_PREFIX) }?.removePrefix(TITLE_TAG_PREFIX).orEmpty()
-        ActiveDownload(itemId, title, info.progress.getInt(DownloadWorker.KEY_PROGRESS, 0))
+        ActiveDownload(itemId, title, info.progress.getInt(DownloadWorker.KEY_PROGRESS, 0), EXPLICIT_TAG in info.tags)
       }
     }
 
   private const val TAG = "book_download"
   private const val ITEM_TAG_PREFIX = "item:"
   private const val TITLE_TAG_PREFIX = "title:"
+  private const val EXPLICIT_TAG = "explicit"
 }

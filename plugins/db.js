@@ -1,7 +1,15 @@
 import { AbsDatabase } from './capacitor/AbsDatabase'
 
 class DbService {
-  constructor() {}
+  constructor(store) {
+    this.store = store
+  }
+
+  /** Downloaded explicit items stay on the device but aren't listed while the setting hides them */
+  hideExplicit(items) {
+    if (!Array.isArray(items) || this.store?.getters['getShowExplicitContent'] !== false) return items
+    return items.filter((item) => !item?.media?.metadata?.explicit)
+  }
 
   getDeviceData() {
     return AbsDatabase.getDeviceData().then((data) => {
@@ -65,11 +73,11 @@ class DbService {
   }
 
   getLocalLibraryItemsInFolder(folderId) {
-    return AbsDatabase.getLocalLibraryItemsInFolder({ folderId }).then((data) => data.value)
+    return AbsDatabase.getLocalLibraryItemsInFolder({ folderId }).then((data) => this.hideExplicit(data.value))
   }
 
   getLocalLibraryItems(mediaType = null) {
-    return AbsDatabase.getLocalLibraryItems({ mediaType }).then((data) => data.value)
+    return AbsDatabase.getLocalLibraryItems({ mediaType }).then((data) => this.hideExplicit(data.value))
   }
 
   getLocalLibraryItem(id) {
@@ -124,7 +132,12 @@ class DbService {
 }
 
 export default ({ app, store }, inject) => {
-  inject('db', new DbService())
+  inject('db', new DbService(store))
+
+  // Settings changed outside the app UI, e.g. "Show explicit content" toggled on the watch
+  AbsDatabase.addListener('onDeviceSettingsChanged', (data) => {
+    store.commit('setDeviceData', data)
+  })
 
   // Listen for token refresh events from native app
   AbsDatabase.addListener('onTokenRefresh', (data) => {

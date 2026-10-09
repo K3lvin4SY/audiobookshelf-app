@@ -20,6 +20,8 @@ class DeviceSettings: Object {
     @Persisted var downloadUsingCellular: String = "ALWAYS"
     @Persisted var streamingUsingCellular: String = "ALWAYS"
     @Persisted var disableSleepTimerFadeOut: Bool = false
+    // Client-only: hides explicit items in the app without changing anything on the server
+    @Persisted var hideExplicitContent: Bool = false
 }
 
 func getDefaultDeviceSettings() -> DeviceSettings {
@@ -38,6 +40,7 @@ func deviceSettingsToJSON(settings: DeviceSettings) -> Dictionary<String, Any> {
         "languageCode": settings.languageCode,
         "downloadUsingCellular": settings.downloadUsingCellular,
         "streamingUsingCellular": settings.streamingUsingCellular,
-        "disableSleepTimerFadeOut": settings.disableSleepTimerFadeOut
+        "disableSleepTimerFadeOut": settings.disableSleepTimerFadeOut,
+        "hideExplicitContent": settings.hideExplicitContent
     ]
 }

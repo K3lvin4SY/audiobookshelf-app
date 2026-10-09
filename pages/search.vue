@@ -134,10 +134,12 @@ export default {
 
       this.isFetching = false
 
-      this.bookResults = results?.book || []
-      this.podcastResults = results?.podcast || []
-      this.episodeResults = results?.episodes || []
-      this.seriesResults = results?.series || []
+      // Explicit results are hidden while the "Show explicit content" setting is off
+      const visible = (list) => (list || []).filter((r) => !this.$explicit.isHidden(r.libraryItem))
+      this.bookResults = visible(results?.book)
+      this.podcastResults = visible(results?.podcast)
+      this.episodeResults = visible(results?.episodes)
+      this.seriesResults = (results?.series || []).map((r) => this.$explicit.series(r)).filter((r) => !!r)
       this.authorResults = results?.authors || []
       this.narratorResults = results?.narrators || []
       this.tagResults = results?.tags || []

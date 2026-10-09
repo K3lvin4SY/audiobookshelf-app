@@ -38,10 +38,12 @@ export default {
       return redirect(`/connect?redirect=${route.path}`)
     }
 
-    const playlist = await app.$nativeHttp.get(`/api/playlists/${params.id}`).catch((error) => {
+    let playlist = await app.$nativeHttp.get(`/api/playlists/${params.id}`).catch((error) => {
       console.error('Failed', error)
       return false
     })
+    // Hide explicit items; a playlist with nothing left behaves as if it doesn't exist
+    if (playlist) playlist = app.$explicit.playlist(playlist)
 
     if (!playlist) {
       return redirect('/bookshelf/playlists')

@@ -8,6 +8,13 @@
       </div>
       <p class="pl-4">{{ $strings.LabelUseBookshelfView }}</p>
     </div>
+    <div class="flex items-center py-3">
+      <div class="w-10 flex justify-center" @click="toggleShowExplicitContent">
+        <ui-toggle-switch v-model="showExplicitContent" @input="saveSettings" />
+      </div>
+      <p class="pl-4">{{ $strings.LabelShowExplicitContent }}</p>
+      <span class="material-symbols text-xl ml-2" @click.stop="showInfo('showExplicitContent')">info</span>
+    </div>
     <!-- screen.orientation.lock not supported on iOS webview -->
     <div v-if="!isiOS" class="flex items-center py-3">
       <div class="w-10 flex justify-center" @click.stop="toggleLockOrientation">
@@ -223,7 +230,8 @@ export default {
         downloadUsingCellular: 'ALWAYS',
         streamingUsingCellular: 'ALWAYS',
         androidAutoBrowseLimitForGrouping: 100,
-        androidAutoBrowseSeriesSequenceOrder: 'ASC'
+        androidAutoBrowseSeriesSequenceOrder: 'ASC',
+        hideExplicitContent: false
       },
       theme: 'dark',
       lockCurrentOrientation: false,
@@ -255,6 +263,10 @@ export default {
         enableMp3IndexSeeking: {
           name: this.$strings.LabelEnableMp3IndexSeeking,
           message: this.$strings.LabelEnableMp3IndexSeekingHelp
+        },
+        showExplicitContent: {
+          name: this.$strings.LabelShowExplicitContent,
+          message: this.$strings.LabelShowExplicitContentHelp
         },
         androidAutoBrowseLimitForGrouping: {
           name: this.$strings.LabelAndroidAutoBrowseLimitForGrouping,
@@ -341,6 +353,14 @@ export default {
       ]
     }
   },
+  watch: {
+    // Keep the toggles current when settings change elsewhere (e.g. on the watch)
+    '$store.state.deviceData'(deviceData) {
+      if (!deviceData || deviceData === this.deviceData) return
+      this.deviceData = deviceData
+      this.setDeviceSettings()
+    }
+  },
   computed: {
     // This is flipped because alt view was the default until v0.9.61-beta
     enableBookshelfView: {
@@ -349,6 +369,15 @@ export default {
       },
       set(val) {
         this.settings.enableAltView = !val
+      }
+    },
+    // Stored as hideExplicitContent so settings saved before this option existed keep showing explicit content
+    showExplicitContent: {
+      get() {
+        return !this.settings.hideExplicitContent
+      },
+      set(val) {
+        this.settings.hideExplicitContent = !val
       }
     },
     isiOS() {
@@ -603,6 +632,10 @@ export default {
       this.settings.disableAutoRewind = !this.settings.disableAutoRewind
       this.saveSettings()
     },
+    toggleShowExplicitContent() {
+      this.settings.hideExplicitContent = !this.settings.hideExplicitContent
+      this.saveSettings()
+    },
     toggleEnableAltView() {
       this.settings.enableAltView = !this.settings.enableAltView
       this.saveSettings()
@@ -671,6 +704,7 @@ export default {
 
       this.settings.androidAutoBrowseLimitForGrouping = deviceSettings.androidAutoBrowseLimitForGrouping
       this.settings.androidAutoBrowseSeriesSequenceOrder = deviceSettings.androidAutoBrowseSeriesSequenceOrder || 'ASC'
+      this.settings.hideExplicitContent = !!deviceSettings.hideExplicitContent
     },
     async init() {
       this.loading = true

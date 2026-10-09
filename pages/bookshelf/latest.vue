@@ -69,7 +69,7 @@ export default {
       })
       this.processing = false
       console.log('Episodes', episodePayload)
-      this.recentEpisodes = episodePayload.episodes || []
+      this.recentEpisodes = (episodePayload.episodes || []).filter((episode) => !this.$explicit.isHidden(episode))
       this.totalEpisodes = episodePayload.total
       this.currentPage = page
     },
@@ -86,7 +86,7 @@ export default {
       this.localLibraryItems = await this.$db.getLocalLibraryItems('podcast')
     },
     newLocalLibraryItem(item) {
-      if (item.mediaType !== 'podcast') {
+      if (item.mediaType !== 'podcast' || this.$explicit.isHidden(item)) {
         return
       }
       const matchingLocalLibraryItem = this.localLibraryItems.find((lli) => lli.id === item.id)

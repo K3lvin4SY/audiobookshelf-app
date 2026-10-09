@@ -54,6 +54,9 @@ export default {
     },
     seriesId() {
       this.resetEntities()
+    },
+    showExplicitContent() {
+      this.resetEntities()
     }
   },
   computed: {
@@ -156,6 +159,9 @@ export default {
     altViewEnabled() {
       return this.$store.getters['getAltViewEnabled']
     },
+    showExplicitContent() {
+      return this.$store.getters['getShowExplicitContent']
+    },
     sizeMultiplier() {
       const baseSize = this.isCoverSquareAspectRatio ? 192 : 120
       return this.entityWidth / baseSize
@@ -178,6 +184,9 @@ export default {
 
       const entityPath = this.entityName === 'books' || this.entityName === 'series-books' ? `items` : this.entityName
       const sfQueryString = this.currentSFQueryString ? this.currentSFQueryString + '&' : ''
+      if (this.$explicit.hiding) {
+        return this.fetchAllEntitiesWithoutExplicit(entityPath, sfQueryString)
+      }
       const fullQueryString = `?${sfQueryString}limit=${this.booksPerFetch}&page=${page}&minified=1&include=rssfeed,numEpisodesIncomplete`
 
       const payload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/${entityPath}${fullQueryString}`).catch((error) => {
@@ -214,6 +223,45 @@ export default {
               }
             }
           }
+        }
+      }
+    },
+    /**
+     * Server pages can't leave out explicit items, so when they're hidden the whole list is fetched
+     * once (no limit returns everything) and filtered here, keeping the grid free of gaps.
+     */
+    async fetchAllEntitiesWithoutExplicit(entityPath, sfQueryString) {
+      const payload = await this.$nativeHttp.get(`/api/libraries/${this.currentLibraryId}/${entityPath}?${sfQueryString}minified=1&include=rssfeed,numEpisodesIncomplete`).catch((error) => {
+        console.error('failed to fetch books', error)
+        return null
+      })
+
+      this.isFetchingEntities = false
+      if (this.pendingReset) {
+        this.pendingReset = false
+        this.resetEntities()
+        return
+      }
+      if (!payload?.results) return
+
+      const entityName = this.entityName === 'series-books' ? 'books' : this.entityName
+      const results = this.$explicit.entities(payload.results, entityName)
+      this.initialized = true
+      this.totalEntities = results.length
+      this.totalShelves = Math.ceil(this.totalEntities / this.entitiesPerShelf)
+      this.entities = results
+      // Everything is loaded, so scrolling never needs to fetch another page
+      const totalPages = Math.ceil(results.length / this.booksPerFetch) + 1
+      for (let p = 0; p < totalPages; p++) this.pagesLoaded[p] = true
+      this.$eventBus.$emit('bookshelf-total-entities', this.totalEntities)
+
+      for (const key in this.entityComponentRefs) {
+        const index = Number(key)
+        if (!this.entities[index] || !this.entityComponentRefs[index]) continue
+        this.entityComponentRefs[index].setEntity(this.entities[index])
+        if (this.isBookEntity) {
+          const localLibraryItem = this.localLibraryItems.find((lli) => lli.libraryItemId == this.entities[index].id)
+          if (localLibraryItem) this.entityComponentRefs[index].setLocalLibraryItem(localLibraryItem)
         }
       }
     },
@@ -454,6 +502,11 @@ export default {
       console.log('Item updated', libraryItem)
       if (this.entityName === 'books' || this.entityName === 'series-books') {
         var indexOf = this.entities.findIndex((ent) => ent && ent.id === libraryItem.id)
+        // An item that became explicit while explicit content is hidden must disappear
+        if (indexOf >= 0 && this.$explicit.isHidden(libraryItem)) {
+          this.libraryItemRemoved(libraryItem)
+          return
+        }
         if (indexOf >= 0) {
           this.entities[indexOf] = libraryItem
           if (this.entityComponentRefs[indexOf]) {

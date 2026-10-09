@@ -29,6 +29,7 @@ const val ALL_LIBRARIES = "all"
 fun LibraryScreen(nav: NavHostController, libraryId: String, name: String) {
   val app = LocalApp.current
   val scope = rememberCoroutineScope()
+  val hideExplicit = rememberHideExplicit()
   val books = remember { mutableStateListOf<BookSummary>() }
   var progress by remember { mutableStateOf<Map<String, ServerProgress>>(emptyMap()) }
   var page by remember { mutableIntStateOf(0) }
@@ -42,11 +43,14 @@ fun LibraryScreen(nav: NavHostController, libraryId: String, name: String) {
     error = null
     scope.launch {
       try {
-        val (results, count) = app.api.libraryItems(libraryId, page)
         if (page == 0) progress = runCatching { app.api.allProgress() }.getOrDefault(emptyMap())
-        books.addAll(results)
-        total = count
-        page++
+        // Keep going while a page only contained hidden explicit books, so "Show more" always shows something
+        do {
+          val (results, count) = app.api.libraryItems(libraryId, page)
+          books.addAll(results)
+          total = count
+          page++
+        } while (hideExplicit && results.none { !it.explicit } && books.size < total)
       } catch (e: Exception) {
         error = e.message ?: "Could not load library"
       } finally {
@@ -65,14 +69,19 @@ fun LibraryScreen(nav: NavHostController, libraryId: String, name: String) {
     }
   ) {
     header(name.ifEmpty { "Library" })
-    if (total > 0) caption("$total books")
-    items(books.toList(), key = { it.id }) { book ->
+    // The server's total includes explicit books, so only show it when nothing is hidden
+    if (total > 0 && !hideExplicit) caption("$total books")
+    items(books.toList().visible(hideExplicit), key = { it.id }) { book ->
       BookButton(spec, book.title, progressLabel(book, progress[book.id]), app.api.coverUrl(book.id, 120), { nav.navigate(Routes.item(book.id)) })
     }
     when {
       loading -> loadingItem()
       error != null -> errorItem(error!!, ::loadMore)
-      books.size < total -> item { MenuButton(spec, Icons.Default.ExpandMore, "Show more", "${total - books.size} more", ::loadMore) }
+      books.size >= total && books.toList().visible(hideExplicit).isEmpty() ->
+        caption(if (hideExplicit && books.isNotEmpty()) "Everything here is hidden by your explicit content setting" else "No books")
+      books.size < total -> item {
+        MenuButton(spec, Icons.Default.ExpandMore, "Show more", if (hideExplicit) null else "${total - books.size} more", ::loadMore)
+      }
     }
   }
 }
@@ -81,6 +90,7 @@ fun LibraryScreen(nav: NavHostController, libraryId: String, name: String) {
 fun SearchScreen(nav: NavHostController, libraryId: String) {
   val app = LocalApp.current
   val scope = rememberCoroutineScope()
+  val hideExplicit = rememberHideExplicit()
   var query by rememberSaveable { mutableStateOf("") }
   var results by remember { mutableStateOf<Load<List<BookSummary>>?>(null) }
 
@@ -118,8 +128,9 @@ fun SearchScreen(nav: NavHostController, libraryId: String) {
       is Load.Loading -> loadingItem()
       is Load.Failed -> errorItem(r.message) { search(query) }
       is Load.Ready -> {
-        if (r.value.isEmpty()) caption("No books found")
-        items(r.value, key = { it.id }) { book ->
+        val found = r.value.visible(hideExplicit)
+        if (found.isEmpty()) caption("No books found")
+        items(found, key = { it.id }) { book ->
           BookButton(spec, book.title, book.author, app.api.coverUrl(book.id, 120), { nav.navigate(Routes.item(book.id)) })
         }
       }

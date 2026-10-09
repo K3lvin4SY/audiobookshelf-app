@@ -70,6 +70,7 @@ fun ItemScreen(nav: NavHostController, itemId: String) {
     }
   }
   val ready = data as? Load.Ready
+  val hideExplicit = rememberHideExplicit()
   val isCurrent = nowPlaying?.book?.id == itemId
   val hasProgress = (ready?.value?.progress?.currentTime ?: app.progress.get(itemId)?.currentTime ?: 0.0) > 0
 
@@ -87,6 +88,15 @@ fun ItemScreen(nav: NavHostController, itemId: String) {
         starting = false
       }
     }
+  }
+
+  // Behave as if the book doesn't exist while explicit content is hidden (e.g. opened from an old link)
+  if (hideExplicit && ready?.value?.book?.explicit == true) {
+    ListScreen {
+      header("Hidden")
+      caption("This book is hidden by your explicit content setting.")
+    }
+    return
   }
 
   ListScreen(
@@ -168,7 +178,7 @@ fun ItemScreen(nav: NavHostController, itemId: String) {
               label = { Text("Downloading ${state.percent}%") }
             )
             else -> FilledTonalButton(
-              onClick = { Downloads.start(context, book.id, book.title) },
+              onClick = { Downloads.start(context, book.id, book.title, book.explicit) },
               modifier = itemModifier(spec),
               transformation = SurfaceTransformation(spec),
               icon = { Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize)) },

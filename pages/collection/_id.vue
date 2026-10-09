@@ -42,6 +42,8 @@ export default {
       console.error('Failed', error)
       return false
     })
+    // Hide explicit books; a collection with nothing left behaves as if it doesn't exist
+    if (collection) collection = app.$explicit.collection(collection)
 
     if (!collection) {
       return redirect('/bookshelf')

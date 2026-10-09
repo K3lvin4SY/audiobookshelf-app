@@ -27,13 +27,18 @@ import com.audiobookshelf.wear.download.Downloads
 fun DownloadsScreen(nav: NavHostController) {
   val app = LocalApp.current
   val context = LocalContext.current
-  val books by app.downloads.books.collectAsState()
-  val active by remember { Downloads.active(context) }.collectAsState(emptyList())
-  val used = books.sumOf { it.sizeBytes }
+  val hideExplicit = rememberHideExplicit()
+  val allBooks by app.downloads.books.collectAsState()
+  val allActive by remember { Downloads.active(context) }.collectAsState(emptyList())
+  // Hidden explicit downloads stay on the watch; they just aren't listed
+  val books = allBooks.filterNot { hideExplicit && it.book.explicit }
+  val active = allActive.filterNot { hideExplicit && it.explicit }
+  val used = allBooks.sumOf { it.sizeBytes }
   val free = app.downloads.freeBytes()
 
   ListScreen {
     header("On this watch")
+    // Storage totals include hidden books, since they still take up space
     item {
       Column(contentModifier(spec).padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(

@@ -150,25 +150,30 @@ class MediaManager(private var apiHandler: ApiHandler, var ctx: Context) {
     val serverConnConfig = if (DeviceManager.isConnectedToServer) DeviceManager.serverConnectionConfig else DeviceManager.deviceData.getLastServerConnectionConfig()
 
     if (!DeviceManager.isConnectedToServer || !DeviceManager.checkConnectivity(ctx) || serverConnConfig == null || serverConnConfig.id != serverConfigIdUsed) {
-      podcastEpisodeLibraryItemMap = mutableMapOf()
-      serverLibraries = listOf()
-      serverLibraryItems = mutableListOf()
-      cachedLibraryAuthors = hashMapOf()
-      cachedLibraryAuthorItems = hashMapOf()
-      cachedLibraryAuthorSeriesItems = hashMapOf()
-      cachedLibrarySeries = hashMapOf()
-      cachedLibrarySeriesItem = hashMapOf()
-      cachedLibraryCollections = hashMapOf()
-      cachedLibraryRecentShelves = hashMapOf()
-      cachedLibraryDiscovery = hashMapOf()
-      cachedLibraryPodcasts = hashMapOf()
-      isLibraryPodcastsCached = hashMapOf()
-      serverItemsInProgress = listOf()
-      allLibraryPersonalizationsDone = false
-      libraryPersonalizationsDone = 0
+      clearServerCache()
       return true
     }
     return false
+  }
+
+  /** Drops cached server browse data so it's reloaded (e.g. after the explicit content setting changes). */
+  fun clearServerCache() {
+    podcastEpisodeLibraryItemMap = mutableMapOf()
+    serverLibraries = listOf()
+    serverLibraryItems = mutableListOf()
+    cachedLibraryAuthors = hashMapOf()
+    cachedLibraryAuthorItems = hashMapOf()
+    cachedLibraryAuthorSeriesItems = hashMapOf()
+    cachedLibrarySeries = hashMapOf()
+    cachedLibrarySeriesItem = hashMapOf()
+    cachedLibraryCollections = hashMapOf()
+    cachedLibraryRecentShelves = hashMapOf()
+    cachedLibraryDiscovery = hashMapOf()
+    cachedLibraryPodcasts = hashMapOf()
+    isLibraryPodcastsCached = hashMapOf()
+    serverItemsInProgress = listOf()
+    allLibraryPersonalizationsDone = false
+    libraryPersonalizationsDone = 0
   }
 
   private fun loadItemsInProgressForAllLibraries(cb: (List<ItemInProgress>) -> Unit) {

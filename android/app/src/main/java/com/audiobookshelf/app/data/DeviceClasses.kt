@@ -172,7 +172,11 @@ data class DeviceSettings(
         var downloadUsingCellular: DownloadUsingCellularSetting,
         var streamingUsingCellular: StreamingUsingCellularSetting,
         var androidAutoBrowseLimitForGrouping: Int,
-        var androidAutoBrowseSeriesSequenceOrder: AndroidAutoBrowseSeriesSequenceOrderSetting
+        var androidAutoBrowseSeriesSequenceOrder: AndroidAutoBrowseSeriesSequenceOrderSetting,
+        // Stored inverted so settings saved before this option existed default to showing explicit content
+        var hideExplicitContent: Boolean = false,
+        // When hideExplicitContent last changed on this phone or the watch; the newest change wins
+        var explicitSettingUpdatedAt: Long = 0L
 ) {
   companion object {
     // Static method to get default device settings
@@ -201,7 +205,9 @@ data class DeviceSettings(
               downloadUsingCellular = DownloadUsingCellularSetting.ALWAYS,
               streamingUsingCellular = StreamingUsingCellularSetting.ALWAYS,
               androidAutoBrowseLimitForGrouping = 100,
-              androidAutoBrowseSeriesSequenceOrder = AndroidAutoBrowseSeriesSequenceOrderSetting.ASC
+              androidAutoBrowseSeriesSequenceOrder = AndroidAutoBrowseSeriesSequenceOrderSetting.ASC,
+              hideExplicitContent = false,
+              explicitSettingUpdatedAt = 0L
       )
     }
   }

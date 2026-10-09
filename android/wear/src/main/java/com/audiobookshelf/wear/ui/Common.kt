@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -53,6 +54,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import coil.compose.AsyncImage
 import com.audiobookshelf.wear.WearApp
+import com.audiobookshelf.wear.data.BookSummary
 import com.audiobookshelf.wear.playback.PlayerConnection
 import java.util.Locale
 
@@ -81,6 +83,13 @@ fun <T> rememberLoad(vararg keys: Any?, block: suspend () -> T): Pair<Load<T>, (
   }
   return state to { attempt++ }
 }
+
+/** True when "Show explicit content" is off; explicit books are then hidden everywhere. */
+@Composable
+fun rememberHideExplicit(): Boolean = LocalApp.current.contentSettings.hideExplicit.collectAsState().value
+
+fun List<BookSummary>.visible(hideExplicit: Boolean): List<BookSummary> =
+  if (hideExplicit) filterNot { it.explicit } else this
 
 /** A short, human readable reason for a failed request. */
 fun describeError(e: Exception): String = when {

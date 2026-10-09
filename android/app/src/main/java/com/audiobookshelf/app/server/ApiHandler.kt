@@ -431,10 +431,29 @@ class ApiHandler(var ctx:Context) {
         val array = it.getJSONArray("value")
         for (i in 0 until array.length()) {
           val item = jacksonMapper.readValue<LibraryShelfType>(array.get(i).toString())
-          items.add(item)
+          items.add(withoutHiddenExplicit(item))
         }
         cb(items)
       }
+    }
+  }
+
+  /** A series is hidden when every one of its books is hidden by the explicit content setting. */
+  private fun isSeriesHidden(series: LibrarySeriesItem): Boolean {
+    if (!DeviceManager.hideExplicitContent) return false
+    series.books = series.books?.filterNot { DeviceManager.isHiddenExplicit(it) }?.toMutableList()
+    return series.books?.isEmpty() == true
+  }
+
+  /** Removes explicit items from a personalized shelf when the explicit content setting hides them. */
+  private fun withoutHiddenExplicit(shelf: LibraryShelfType): LibraryShelfType {
+    if (!DeviceManager.hideExplicitContent) return shelf
+    return when (shelf) {
+      is LibraryShelfBookEntity -> shelf.copy(entities = shelf.entities?.filterNot { DeviceManager.isHiddenExplicit(it) })
+      is LibraryShelfEpisodeEntity -> shelf.copy(entities = shelf.entities?.filterNot { DeviceManager.isHiddenExplicit(it) })
+      is LibraryShelfPodcastEntity -> shelf.copy(entities = shelf.entities?.filterNot { DeviceManager.isHiddenExplicit(it) })
+      is LibraryShelfSeriesEntity -> shelf.copy(entities = shelf.entities?.filterNot { isSeriesHidden(it) })
+      is LibraryShelfAuthorEntity -> shelf
     }
   }
 
@@ -471,7 +490,7 @@ class ApiHandler(var ctx:Context) {
         val array = it.getJSONArray("results")
         for (i in 0 until array.length()) {
           val item = jacksonMapper.readValue<LibraryItem>(array.get(i).toString())
-          items.add(item)
+          if (!DeviceManager.isHiddenExplicit(item)) items.add(item)
         }
       }
       cb(items)
@@ -486,7 +505,7 @@ class ApiHandler(var ctx:Context) {
         val array = it.getJSONArray("results")
         for (i in 0 until array.length()) {
           val item = jacksonMapper.readValue<LibrarySeriesItem>(array.get(i).toString())
-          items.add(item)
+          if (!isSeriesHidden(item)) items.add(item)
         }
       }
       cb(items)
@@ -502,7 +521,7 @@ class ApiHandler(var ctx:Context) {
         val array = it.getJSONArray("results")
         for (i in 0 until array.length()) {
           val item = jacksonMapper.readValue<LibraryItem>(array.get(i).toString())
-          items.add(item)
+          if (!DeviceManager.isHiddenExplicit(item)) items.add(item)
         }
       }
       cb(items)
@@ -538,7 +557,7 @@ class ApiHandler(var ctx:Context) {
           if (item.collapsedSeries != null) {
             item.collapsedSeries?.libraryId = libraryId
           }
-          items.add(item)
+          if (!DeviceManager.isHiddenExplicit(item)) items.add(item)
         }
       }else{
         Log.e(tag, "No results")
@@ -555,6 +574,10 @@ class ApiHandler(var ctx:Context) {
         val array = it.getJSONArray("results")
         for (i in 0 until array.length()) {
           val item = jacksonMapper.readValue<LibraryCollection>(array.get(i).toString())
+          if (DeviceManager.hideExplicitContent) {
+            item.books = item.books?.filterNot { book -> DeviceManager.isHiddenExplicit(book) }?.toMutableList()
+            if (item.books.isNullOrEmpty()) continue
+          }
           items.add(item)
         }
       }
@@ -570,6 +593,14 @@ class ApiHandler(var ctx:Context) {
         cb(null)
       } else {
         val librarySearchResults = jacksonMapper.readValue<LibraryItemSearchResultType>(it.toString())
+        if (DeviceManager.hideExplicitContent) {
+          librarySearchResults.book = librarySearchResults.book?.filterNot { r -> DeviceManager.isHiddenExplicit(r.libraryItem) }
+          librarySearchResults.podcast = librarySearchResults.podcast?.filterNot { r -> DeviceManager.isHiddenExplicit(r.libraryItem) }
+          librarySearchResults.series = librarySearchResults.series?.mapNotNull { r ->
+            val books = r.books?.filterNot { book -> DeviceManager.isHiddenExplicit(book) }
+            if (r.books != null && books.isNullOrEmpty()) null else r.copy(books = books)
+          }
+        }
         cb(librarySearchResults)
       }
     }
@@ -583,7 +614,7 @@ class ApiHandler(var ctx:Context) {
         for (i in 0 until array.length()) {
           val jsobj = array.get(i) as JSONObject
           val itemInProgress = ItemInProgress.makeFromServerObject(jsobj, jacksonMapper)
-          items.add(itemInProgress)
+          if (!DeviceManager.isHiddenExplicit(itemInProgress.libraryItemWrapper)) items.add(itemInProgress)
         }
       }
       cb(items)

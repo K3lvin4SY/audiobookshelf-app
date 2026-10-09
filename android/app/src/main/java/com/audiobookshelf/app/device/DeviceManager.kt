@@ -47,6 +47,38 @@ object DeviceManager {
 
   var widgetUpdater: WidgetEventEmitter? = null
 
+  /** Set by the player service so Android Auto can reload when the explicit content setting changes. */
+  var onExplicitSettingChanged: (() -> Unit)? = null
+
+  /** True when "Show Explicit Content" is off. This only hides content in the app; the server is unaffected. */
+  val hideExplicitContent
+    get() = deviceData.deviceSettings?.hideExplicitContent == true
+
+  /** Whether an item should be hidden because of the explicit content setting. */
+  fun isHiddenExplicit(item: LibraryItemWrapper?): Boolean {
+    if (!hideExplicitContent) return false
+    return when (item) {
+      is LibraryItem -> item.media.metadata.explicit
+      is LocalLibraryItem -> item.media.metadata.explicit
+      else -> false
+    }
+  }
+
+  /**
+   * Applies a change to the explicit content setting from this phone or the watch. The newest
+   * change wins; returns true if the setting was updated.
+   */
+  fun applyExplicitSetting(hide: Boolean, changedAt: Long): Boolean {
+    val settings = deviceData.deviceSettings ?: return false
+    if (changedAt <= settings.explicitSettingUpdatedAt) return false
+    val changed = settings.hideExplicitContent != hide
+    settings.hideExplicitContent = hide
+    settings.explicitSettingUpdatedAt = changedAt
+    dbManager.saveDeviceData(deviceData)
+    if (changed) onExplicitSettingChanged?.invoke()
+    return true
+  }
+
   init {
     Log.d(tag, "Device Manager Singleton invoked")
 

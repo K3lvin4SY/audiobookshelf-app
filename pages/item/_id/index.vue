@@ -185,6 +185,10 @@ export default {
       if (!libraryItem) {
         return redirect('/?error=Failed to get downloaded library item')
       }
+      // Hidden by the explicit content setting: behave as if the item isn't available
+      if (app.$explicit.isHidden(libraryItem)) {
+        return redirect('/bookshelf')
+      }
 
       // If library item is linked to the currently connected server then redirect to the page using the server library item id
       if (libraryItem?.libraryItemId?.startsWith('li_')) {
@@ -762,6 +766,11 @@ export default {
         console.error('Failed', error)
         return null
       })
+
+      if (libraryItem && this.$explicit.isHidden(libraryItem)) {
+        this.$toast.info(this.$strings.LabelShowExplicitContentHidden)
+        return this.$router.replace('/bookshelf')
+      }
 
       if (libraryItem) {
         const localLibraryItem = await this.$db.getLocalLibraryItemByLId(this.libraryItemId)

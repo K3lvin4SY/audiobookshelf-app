@@ -47,7 +47,8 @@ data class BookSummary(
   val id: String,
   val title: String,
   val author: String,
-  val duration: Double
+  val duration: Double,
+  val explicit: Boolean = false
 )
 
 data class ServerProgress(
@@ -136,7 +137,8 @@ data class BookDetail(
   val author: String,
   val duration: Double,
   val tracks: List<Track>,
-  val chapters: List<Chapter>
+  val chapters: List<Chapter>,
+  val explicit: Boolean = false
 ) {
   val totalSize get() = tracks.sumOf { it.size }
 
@@ -150,6 +152,7 @@ data class BookDetail(
     .put("duration", duration)
     .put("tracks", JSONArray(tracks.map { it.toJson() }))
     .put("chapters", JSONArray(chapters.map { it.toJson() }))
+    .put("explicit", explicit)
 
   companion object {
     fun fromJson(json: JSONObject) = BookDetail(
@@ -159,7 +162,8 @@ data class BookDetail(
       author = json.optString("author"),
       duration = json.optDouble("duration", 0.0),
       tracks = json.getJSONArray("tracks").objects().map(Track::fromJson),
-      chapters = json.optJSONArray("chapters")?.objects()?.map(Chapter::fromJson) ?: emptyList()
+      chapters = json.optJSONArray("chapters")?.objects()?.map(Chapter::fromJson) ?: emptyList(),
+      explicit = json.optBoolean("explicit", false)
     )
 
     /** Parses the server's expanded library item JSON (/api/items/:id?expanded=1). */
@@ -174,7 +178,8 @@ data class BookDetail(
         author = metadata.optString("authorName"),
         duration = media.optDouble("duration", tracks.sumOf { it.duration }),
         tracks = tracks,
-        chapters = media.optJSONArray("chapters")?.objects()?.map(Chapter::fromJson) ?: emptyList()
+        chapters = media.optJSONArray("chapters")?.objects()?.map(Chapter::fromJson) ?: emptyList(),
+        explicit = metadata.optBoolean("explicit", false)
       )
     }
   }

@@ -91,6 +91,10 @@ export default {
       console.error('No item...', params.id)
       return redirect('/')
     }
+    // Hidden by the explicit content setting: behave as if the podcast isn't available
+    if (app.$explicit.isHidden(libraryItem)) {
+      return redirect('/bookshelf')
+    }
 
     episode = libraryItem.media.episodes.find((ep) => ep.id === episodeId)
     if (localEpisode) {

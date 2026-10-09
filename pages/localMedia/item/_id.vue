@@ -431,6 +431,11 @@ export default {
         this.failed = true
         return
       }
+      // Downloaded but hidden by the explicit content setting
+      if (this.$explicit.isHidden(this.localLibraryItem)) {
+        this.$toast.info(this.$strings.LabelShowExplicitContentHidden)
+        return this.$router.replace('/downloads')
+      }
 
       this.audioTracksCopy = this.audioTracks.map((at) => ({ ...at }))
 
