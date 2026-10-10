@@ -100,7 +100,7 @@
             </intent-filter>
         </service>
 
-        <!-- Settings changed on the Wear OS app -->
+        <!-- Settings, sign in and relay requests from the Wear OS app -->
         <service
             android:name=".device.WatchListenerService"
             android:exported="true">
@@ -109,6 +109,14 @@
                 <data
                     android:host="*"
                     android:pathPrefix="/abs/settings"
+                    android:scheme="wear" />
+            </intent-filter>
+            <!-- Sign in and server relay requests from the watch -->
+            <intent-filter>
+                <action android:name="com.google.android.gms.wearable.CHANNEL_EVENT" />
+                <data
+                    android:host="*"
+                    android:pathPrefix="/abs"
                     android:scheme="wear" />
             </intent-filter>
         </service>

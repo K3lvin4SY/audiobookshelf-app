@@ -5,12 +5,16 @@ import com.audiobookshelf.app.managers.DbManager
 import com.audiobookshelf.app.server.ApiHandler
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.getcapacitor.JSObject
+import com.google.android.gms.wearable.ChannelClient
 import com.google.android.gms.wearable.DataEvent
 import com.google.android.gms.wearable.DataEventBuffer
 import com.google.android.gms.wearable.DataMapItem
 import com.google.android.gms.wearable.WearableListenerService
 
-/** Receives settings changed on the Wear OS app, even while the phone app is closed. */
+/**
+ * Receives settings changed on the Wear OS app and its sign in and relay requests, even while the
+ * phone app is closed.
+ */
 class WatchListenerService : WearableListenerService() {
   private val tag = "WatchListenerService"
 
@@ -27,6 +31,10 @@ class WatchListenerService : WearableListenerService() {
         notifyWebUi()
       }
     }
+  }
+
+  override fun onChannelOpened(channel: ChannelClient.Channel) {
+    WatchBridge.handle(this, channel)
   }
 
   /** Lets the open app refresh its settings and lists. */

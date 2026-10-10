@@ -4,8 +4,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.Explicit
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -30,6 +33,7 @@ import androidx.wear.compose.material3.EdgeButtonSize
 import androidx.wear.compose.material3.SwitchButton
 import androidx.wear.compose.material3.SurfaceTransformation
 import androidx.wear.compose.material3.Text
+import com.audiobookshelf.wear.sync.ServerRoute
 import kotlinx.coroutines.launch
 
 @Composable
@@ -42,6 +46,7 @@ fun SettingsScreen() {
   var confirmSignOut by remember { mutableStateOf(false) }
   val hideExplicit = rememberHideExplicit()
   val classicHome by app.contentSettings.classicHome.collectAsState()
+  val route by app.serverRoute.route.collectAsState()
 
   ListScreen(
     edgeButton = {
@@ -63,8 +68,19 @@ fun SettingsScreen() {
     }
   ) {
     header("Settings")
-    caption(account?.username.orEmpty())
+    caption(account?.username.orEmpty() + if (account?.linkedToPhone == true) " · via phone" else "")
     caption(account?.serverAddress?.removePrefix("https://")?.removePrefix("http://").orEmpty())
+    item {
+      val (icon, label) = when (route) {
+        ServerRoute.Route.DIRECT -> Icons.Default.Wifi to "Direct"
+        ServerRoute.Route.PHONE -> Icons.Default.Smartphone to "Through your phone"
+        ServerRoute.Route.OFFLINE -> Icons.Default.CloudOff to "Offline"
+      }
+      // Tapping checks again, e.g. right after joining Wi-Fi
+      MenuButton(spec, icon, "Connection", label) {
+        app.serverRoute.probeSoon()
+      }
+    }
     item {
       MenuButton(
         spec,
@@ -115,7 +131,7 @@ fun SettingsScreen() {
     confirmButton = {
       AlertDialogDefaults.ConfirmButton(onClick = {
         confirmSignOut = false
-        app.auth.clear()
+        app.auth.signOut()
       })
     },
     dismissButton = { AlertDialogDefaults.DismissButton(onClick = { confirmSignOut = false }) }
