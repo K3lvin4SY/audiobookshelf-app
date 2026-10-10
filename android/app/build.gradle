@@ -134,3 +134,4 @@ dependencies {
 }
 
 apply from: 'capacitor.build.gradle'
+apply from: '../release-signing.gradle'

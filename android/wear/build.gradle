@@ -17,9 +17,10 @@ android {
     applicationId "com.audiobookshelf.app"
     minSdkVersion 30
     targetSdkVersion 34
-    // Watch APKs share the phone app's Play listing, so they need their own version code range
-    versionCode 10000121
-    versionName "0.14.2-beta-wear"
+    // Watch APKs share the phone app's Play listing, so they need their own version code range.
+    // The release workflow overrides these so each release installs as an update.
+    versionCode Integer.parseInt(System.getenv("WEAR_VERSION_CODE") ?: "10000121")
+    versionName(System.getenv("WEAR_VERSION_NAME") ?: "0.14.2-beta-wear")
   }
 
   buildFeatures {
@@ -82,3 +83,5 @@ dependencies {
   implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0'
   implementation 'com.google.guava:guava:33.3.1-android'
 }
+
+apply from: '../release-signing.gradle'
